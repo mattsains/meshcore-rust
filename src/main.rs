@@ -16,6 +16,7 @@ use embedded_graphics_framebuf::FrameBuf;
 use embedded_hal::digital::{OutputPin, PinState};
 use embedded_hal::spi::{Mode, MODE_0};
 use esp_idf_svc::hal::gpio::DriveStrength;
+use esp_idf_svc::hal::i2c::{I2cConfig, I2cDriver};
 use esp_idf_svc::hal::units::Hertz;
 use esp_idf_svc::hal::{
     delay::Delay,
@@ -92,73 +93,49 @@ fn main() {
         .init(&mut delay)
         .unwrap();
 
-    display.clear(Rgb565::BLACK).unwrap();
+    display.clear(Rgb565::RED).unwrap();
+    set_brightness(15, display_bl, delay);
 
-    let style = MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE);
-    let blanking_style = MonoTextStyle::new(&FONT_10X20, Rgb565::BLACK);
+    let kb_addr = 0x55;
+    let kb_brightness_cmd = 0x01;
+    let kb_alt_b_brightness_cmd = 0x02;
 
+    let i2c_sda = peripherals.pins.gpio18;
+    let i2c_scl = peripherals.pins.gpio8;
+
+    let config = I2cConfig::new().baudrate(Hertz(100_000));
+    let mut i2c = I2cDriver::new(peripherals.i2c0, i2c_sda, i2c_scl, &config).unwrap();
+
+    let mut buf: [u8; 1] = [0];
+
+    
+    
+    println!("waiting for data");
     loop {
-        for i in 0..=16 {
-            println!("{i}");
-            set_brightness(i, &mut display_bl, delay);
-            println!("back in main");
-            Text::new(i.to_string().as_str(), Point::new(50, 50), style)
-                .draw(&mut display)
-                .unwrap();
-            delay.delay_ms(300);
-            Text::new(i.to_string().as_str(), Point::new(50, 50), blanking_style)
-                .draw(&mut display)
-                .unwrap();
-            println!("loop iter done");
+        if i2c.read(kb_addr, &mut buf, 100000).is_ok() && buf[0] > 0{
+            println!("{:#010b}", buf[0]);
         }
-        for j in (0..=16).rev() {
-            println!("{j}");
-            set_brightness(j, &mut display_bl, delay);
-            println!("back in main");
-            Text::new(j.to_string().as_str(), Point::new(50, 50), style)
-                .draw(&mut display)
-                .unwrap();
-            delay.delay_ms(300);
-            Text::new(j.to_string().as_str(), Point::new(50, 50), blanking_style)
-                .draw(&mut display)
-                .unwrap();
-        }
-    }
-    loop {
-        print!("done");
-        delay.delay_ms(1000);
+        
+        delay.delay_ms(100);
     }
 }
 
 static DISPLAY_BUFFER: StaticCell<[u8; 1024]> = StaticCell::new();
 static DISPLAY_LEVEL: Mutex<u8> = Mutex::new(16);
 
+/// 0: display off
+/// 16: maximum brightness
 fn set_brightness(level: u8, mut bl: impl embedded_hal::digital::OutputPin, delay: Delay) {
     assert!(level < 17);
 
     let mut current_level = DISPLAY_LEVEL.lock().unwrap();
-    if level == 16 {
-        println!("want 16");
-        bl.set_low().unwrap();
-        println!("wait 3");
-        delay.delay_ms(3); //this wait resets the brightness to max
-        bl.set_high().unwrap();
-        println!("reset currentlevel");
-        *current_level = 16;
-        println!("done");
-    } else if level == 0 {
-        println!("want 0");
+
+    if level == 0 {
         bl.set_low().unwrap();
         delay.delay_ms(3);
-        *current_level = 0;
-        println!("got 0");
     } else {
         // every time we pulse the backlight, it causes it to reduce brightness by 1
         let num_steps = (*current_level as i8 - level as i8).rem_euclid(16);
-        println!(
-            "current: {}, desired: {level} => go down {num_steps}",
-            *current_level
-        );
 
         bl.set_high().unwrap();
         delay.delay_us(30);
@@ -168,8 +145,9 @@ fn set_brightness(level: u8, mut bl: impl embedded_hal::digital::OutputPin, dela
             delay.delay_us(30);
         }
         delay.delay_ms(3);
-        *current_level = level;
     }
+
+    *current_level = level;
 }
 
 fn enable_peripheral(enable_pin: &mut impl embedded_hal::digital::OutputPin) {
