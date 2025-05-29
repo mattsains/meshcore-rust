@@ -1,35 +1,21 @@
 use std::sync::Mutex;
 
 use embedded_graphics::draw_target::DrawTarget;
-use embedded_graphics::mono_font::ascii::FONT_10X20;
-use embedded_graphics::pixelcolor::BinaryColor;
-use embedded_graphics::prelude::{Primitive, Size};
-use embedded_graphics::primitives::{PrimitiveStyle, Rectangle, StyledDrawable};
-use embedded_graphics::Drawable;
 use embedded_graphics::{
-    mono_font::{ascii::FONT_6X10, MonoTextStyle},
     pixelcolor::Rgb565,
-    prelude::{Point, RgbColor},
-    text::Text,
+    prelude::RgbColor,
 };
-use embedded_graphics_framebuf::FrameBuf;
-use embedded_hal::digital::{OutputPin, PinState};
-use embedded_hal::spi::{Mode, MODE_0};
-use esp_idf_svc::hal::gpio::DriveStrength;
+use embedded_hal::spi::MODE_0;
 use esp_idf_svc::hal::i2c::{I2cConfig, I2cDriver};
 use esp_idf_svc::hal::units::Hertz;
 use esp_idf_svc::hal::{
     delay::Delay,
-    gpio::{AnyOutputPin, Output, Pin, PinDriver},
+    gpio::PinDriver,
     prelude::Peripherals,
     spi::{
-        config::{Config, DriverConfig},
-        Spi, SpiDeviceDriver, SpiDriver, SpiSingleDeviceDriver,
+        config::{Config, DriverConfig}, SpiSingleDeviceDriver,
     },
-    units::MegaHertz,
 };
-use esp_idf_svc::sys::gpio_config;
-use mipidsi::NoResetPin;
 use mipidsi::{
     interface::SpiInterface,
     models::ST7789,
@@ -113,7 +99,7 @@ fn main() {
     println!("waiting for data");
     loop {
         if i2c.read(kb_addr, &mut buf, 100000).is_ok() && buf[0] > 0{
-            println!("{:#010b}", buf[0]);
+            print!("{}", buf[0] as char);
         }
         
         delay.delay_ms(100);
