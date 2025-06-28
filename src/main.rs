@@ -31,6 +31,11 @@ use static_cell::StaticCell;
 const W: u16 = 240;
 const H: u16 = 320;
 
+#[cxx::bridge]
+mod ffi {
+
+}
+
 fn main() {
     println!("hello");
     // It is necessary to call this function once. Otherwise some patches to the runtime
@@ -40,7 +45,7 @@ fn main() {
     // Bind the log crate to the ESP Logging facilities
     esp_idf_svc::log::EspLogger::initialize_default();
 
-    log::info!("Hello, world!");
+    log::info!("Hello,world!");
 
     let peripherals = Peripherals::take().unwrap();
 

@@ -1,7 +1,7 @@
 [package]
 name = "esp-idf-test"
 version = "0.1.0"
-authors = ["Matthew Sainsbury <matthew@sainsbury.io>"]
+authors = ["Matthew Sainsbury"]
 edition = "2021"
 resolver = "2"
 rust-version = "1.77"
@@ -29,6 +29,8 @@ embedded-hal = "1.0.0"
 mipidsi = { version="0.9.0", features= ["batch"] }
 embedded-graphics = "0.8.1"
 static_cell = "2.1.0"
+cxx = "1.0.158"
 
 [build-dependencies]
 embuild = "0.33"
+cxx-build = "^0"
